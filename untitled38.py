@@ -44,7 +44,6 @@ local_docs_path = Path('./local_docs')
 
 # Collect all PDF and text file paths
 pdf_file_paths = list(local_docs_path.glob('*.pdf'))
-print(len(pdf_file_paths))
 text_file_paths = list(local_docs_path.glob('*.txt'))
 
 
@@ -97,12 +96,7 @@ def fetch_bugzilla_issues(product='Firefox', status='NEW', max_results=15):
     return bug_texts
 
 # Test the function with a smaller limit for simplicity
-try:
-    bugs = fetch_bugzilla_issues(max_results=3)
-    for i, bug in enumerate(bugs):
-        print(f"{i + 1}. {bug}\n")
-except Exception as e:
-    print(f"An error occurred: {e}")
+
 
 
 
@@ -124,13 +118,7 @@ def fetch_jira_issues(jql, max_results=5):
     return jira_texts
 
 # Test the function with a sample JQL query
-try:
-    jql_query = "project=SPARK AND status=Open"  # Example JQL for Apache Spark project
-    issues = fetch_jira_issues(jql=jql_query, max_results=10)
-    for i, issue in enumerate(issues):
-        print(f"{i + 1}. {issue}\n")
-except Exception as e:
-    print(f"An error occurred: {e}")
+
 
 
 def fetch_github_issues(repo_owner, repo_name):
@@ -284,9 +272,6 @@ def load_agile_data_to_ChromaDB(collection_name, sentence_transformer_model, chr
 
     return chroma_client, chroma_collection
 
-#chroma_client, chroma_collection= load_agile_data_to_ChromaDB(collection_name,sentence_transformer_model, chromaDB_path)
-print(f"Collection name: {chroma_collection.name}")
-print(f"Number of documents in collection: {chroma_collection.count()}")
 
 
 
@@ -332,8 +317,8 @@ def show_results(results, return_only_docs=False):
 
 
 results = retrieveDocs(chroma_collection, query="Explain Agile sprint planning", n_results=5)
-print("Results:", results)
-show_results(results)
+#print("Results:", results)
+#show_results(results)
 
 
 def build_chatBot(system_instruction):
