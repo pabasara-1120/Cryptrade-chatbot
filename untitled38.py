@@ -23,9 +23,13 @@ from IPython.display import display, Markdown
 
 import os
 import google.generativeai as genai
+from dotenv import load_dotenv
 
 # API key configuration
-GOOGLE_API_KEY = 'AIzaSyB-QRYybxvfsioAEddtygVDTa6dmn2BE9I'
+load_dotenv()
+
+# Access the GOOGLE_API_KEY from environment variables
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # ChromaDB Configuration
@@ -39,7 +43,6 @@ embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
 import os
 from pathlib import Path
 
-# Path to the folder containing local PDFs and text files
 local_docs_path = Path('./local_docs')
 
 # Collect all PDF and text file paths
@@ -107,7 +110,7 @@ def fetch_jira_issues(jql, max_results=5):
     url = 'https://issues.apache.org/jira/rest/api/2/search'
     params = {'jql': jql, 'maxResults': max_results}
     response = requests.get(url, params=params)
-    response.raise_for_status()  # This will raise an error if the request fails
+    response.raise_for_status()  
     issues = response.json().get('issues', [])
 
     jira_texts = []
@@ -117,7 +120,6 @@ def fetch_jira_issues(jql, max_results=5):
 
     return jira_texts
 
-# Test the function with a sample JQL query
 
 
 
@@ -163,7 +165,6 @@ agile_manifesto_text = [
 def convert_PDF_Text(pdf_path):
   reader = PdfReader(pdf_path)
   pdf_texts = [p.extract_text().strip() for p in reader.pages]
-  # Filter the empty strings
   pdf_texts = [text for text in pdf_texts if text]
   print("Document: ",pdf_path," chunk size: ", len(pdf_texts))
   return pdf_texts
@@ -234,6 +235,7 @@ def load_agile_data_to_ChromaDB(collection_name, sentence_transformer_model, chr
     github_data = github_issues + github_milestones
 
     # Fetch Bugzilla Data
+    
     # Add Bugzilla fetching here
 
     # Fetch Apache JIRA Data
