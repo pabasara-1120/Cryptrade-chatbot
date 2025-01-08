@@ -146,8 +146,7 @@ def load_agile_data_to_ChromaDB(collection_name, sentence_transformer_model, chr
     current_id = chroma_collection.count()
 
     # Fetch GitHub Data
-    github_issues = fetch_github_issues('apache', 'kafka')  # Example repo
-    github_milestones = fetch_github_milestones('apache', 'kafka')
+    
     github_data = github_issues + github_milestones
 
     # Fetch Bugzilla Data
