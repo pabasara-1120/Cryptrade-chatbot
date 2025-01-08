@@ -21,7 +21,9 @@ from chromadb import Client, PersistentClient
 from chromadb.utils import embedding_functions
 from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE, Settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter, SentenceTransformersTokenTextSplitter
-
+import redis
+import requests
+import json
 # Load environment variables
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -152,24 +154,77 @@ def generate_LLM_answer(prompt, context, chat):
 
 def generateAnswer(RAG_LLM, chroma_collection, query, n_results=5):
     retrieved_documents = retrieveDocs(chroma_collection, query, n_results, return_only_docs=True)
+    
+    try:
+        api_url = "http://localhost:8080/coins/top50" 
+        real_time_data = fetch_and_cache_real_time_data(api_url, cache_key="crypto_real_time")
+        print("Real time data fetched")
+    except Exception as e:
+        real_time_data = {"error": str(e)}
+    
+    # Combine static and real-time data into the prompt
     prompt = f"QUESTION: {query}"
     context = "\nEXCERPTS:\n" + "\n".join(retrieved_documents)
+    context += f"\nREAL-TIME DATA:\n{json.dumps(real_time_data, indent=2)}"
+    
     return generate_LLM_answer(prompt, context, RAG_LLM)
+
 
 system_prompt = "You are a knowledgeable assistant specializing in cryptocurrency trading."
 RAG_LLM = build_chatBot(system_prompt)
 
-# Monitor the size of ChromaDB collection
+redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, decode_responses=True)
+
+
+def fetch_and_cache_real_time_data(api_url, cache_key, ttl=300):
+    # Check Redis cache first
+    cached_data = redis_client.get(cache_key)
+    if cached_data:
+        return json.loads(cached_data)
+    
+    # Fetch from API if not cached
+    response = requests.get(api_url)
+    if response.status_code == 200:
+        real_time_data = response.json()
+        redis_client.set(cache_key, json.dumps(real_time_data))
+        redis_client.expire(cache_key, ttl)
+        return real_time_data
+    else:
+        raise Exception(f"Failed to fetch real-time data: {response.status_code}")
+
+
 try:
-    chroma_client, chroma_collection = load_crypto_data_to_ChromaDB(
-        collection_name, sentence_transformer_model, chromaDB_path
+    # Create or load the ChromaDB client and collection
+    chroma_client = PersistentClient(
+        path=chromaDB_path,
+        settings=Settings(),
+        tenant=DEFAULT_TENANT,
+        database=DEFAULT_DATABASE
     )
-    print("Data successfully loaded into ChromaDB.")
-except RuntimeError as e:
-    print(f"Memory issue encountered: {e}")
-    print("Proceeding with the current ChromaDB collection without adding more data.")
+    chroma_collection = chroma_client.get_or_create_collection(
+        collection_name,
+        embedding_function=embedding_function
+    )
+    print("ChromaDB collection successfully created or loaded.")
+    
+    # Try loading data into the collection
+    # try:
+    #     load_crypto_data_to_ChromaDB(collection_name, sentence_transformer_model, chromaDB_path)
+    #     print("Data successfully loaded into ChromaDB.")
+    # except RuntimeError as e:
+    #     print(f"Memory issue encountered: {e}")
+    #     print("Proceeding with the current ChromaDB collection without adding more data.")
+except Exception as e:
+    print(f"Failed to initialize ChromaDB: {e}")
+    chroma_collection = None  # Handle the case where the collection cannot be loaded
 
 # Example Query
-query = "Explain the difference between market and limit orders in crypto trading."
-response = generateAnswer(RAG_LLM, chroma_collection, query, 5)
-print("Response:", response)
+if chroma_collection:
+    query = "What is the current Bitcoin price and how does it compare to historical data?"
+    response = generateAnswer(RAG_LLM, chroma_collection, query, n_results=5)
+    print("Response:", response)
+
+else:
+    print("ChromaDB collection is not available. Cannot process queries.")
+
+
