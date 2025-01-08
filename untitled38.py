@@ -81,87 +81,17 @@ def to_markdown(text):
 
 import requests
 
-def fetch_bugzilla_issues(product='Firefox', status='NEW', max_results=15):
-    """
-    Fetch recent issues from Mozilla's Bugzilla for a specified product.
-    """
-    url = 'https://bugzilla.mozilla.org/rest/bug'
-    params = {'product': product, 'status': status, 'limit': max_results}
-    response = requests.get(url, params=params)
-    response.raise_for_status()  # This will raise an error if the request fails
-    bugs = response.json().get('bugs', [])
-
-    bug_texts = []
-    for bug in bugs:
-        text = f"Bug #{bug['id']}: {bug['summary']} (Assigned to: {bug['assigned_to']})"
-        bug_texts.append(text)
-
-    return bug_texts
-
-# Test the function with a smaller limit for simplicity
 
 
 
 
-def fetch_jira_issues(jql, max_results=5):
-    """
-    Fetch issues from Apache JIRA using the specified JQL query.
-    """
-    url = 'https://issues.apache.org/jira/rest/api/2/search'
-    params = {'jql': jql, 'maxResults': max_results}
-    response = requests.get(url, params=params)
-    response.raise_for_status()  
-    issues = response.json().get('issues', [])
-
-    jira_texts = []
-    for issue in issues:
-        text = f"Issue {issue['key']}: {issue['fields']['summary']} (Status: {issue['fields']['status']['name']})"
-        jira_texts.append(text)
-
-    return jira_texts
 
 
 
 
-def fetch_github_issues(repo_owner, repo_name):
-    issues_url = f'https://api.github.com/repos/{repo_owner}/{repo_name}/issues'
-    response = requests.get(issues_url)
-    issues = response.json() if response.status_code == 200 else []
-    issue_texts = [f"Issue {issue['number']}: {issue['title']} - {issue['body']}" for issue in issues if 'body' in issue]
-    return issue_texts
-
-def fetch_github_milestones(repo_owner, repo_name):
-    milestones_url = f'https://api.github.com/repos/{repo_owner}/{repo_name}/milestones'
-    response = requests.get(milestones_url)
-    milestones = response.json() if response.status_code == 200 else []
-    milestone_texts = [f"Milestone {milestone['title']}: Due on {milestone['due_on']}" for milestone in milestones]
-    return milestone_texts
 
 
-agile_manifesto_text = [
-    "Our highest priority is to satisfy the customer through early and continuous delivery of valuable software.",
-"Welcome changing requirements, even late in development. Agile processes harness change for the customer's competitive advantage.",
 
-"Deliver working software frequently, from a couple of weeks to a couple of months, with a preference to the shorter timescale.",
-
-"Business people and developers must work together daily throughout the project.",
-
-"Build projects around motivated individuals.Give them the environment and support they need, and trust them to get the job done.",
-
-"The most efficient and effective method of conveying information to and within a development team is face-to-face conversation.",
-
-"Working software is the primary measure of progress.",
-
-"Agile processes promote sustainable development. The sponsors, developers, and users should be able to maintain a constant pace indefinitely.",
-
-"Continuous attention to technical excellence and good design enhances agility.",
-
-"Simplicity--the art of maximizing the amount of work not done--is essential.",
-
-"The best architectures, requirements, and designs emerge from self-organizing teams.",
-
-"At regular intervals, the team reflects on how to become more effective, then tunes and adjusts its behavior accordingly.",
-]
 def convert_PDF_Text(pdf_path):
   reader = PdfReader(pdf_path)
   pdf_texts = [p.extract_text().strip() for p in reader.pages]
@@ -201,21 +131,7 @@ def add_meta_data(text_chunksinTokens, title, category, initial_id):
   }
   metadatas = [ metadata for i in range(len(text_chunksinTokens))]
   return ids, metadatas
-def fetch_bugzilla_bugs(product_name):
-    bugzilla_url = 'https://bugzilla.mozilla.org/rest/bug'
-    params = {'product': product_name, 'limit': 10}  # Adjust limit as needed
-    response = requests.get(bugzilla_url, params=params)
-    bugs = response.json().get('bugs', []) if response.status_code == 200 else []
-    bug_texts = [f"Bug #{bug['id']}: {bug['summary']} (Assigned to: {bug['assigned_to']})" for bug in bugs]
-    return bug_texts
 
-def fetch_apache_jira_issues(project_key):
-    jira_url = 'https://issues.apache.org/jira/rest/api/2/search'
-    params = {'jql': f'project={project_key} AND status=Open', 'maxResults': 10}
-    response = requests.get(jira_url, params=params)
-    issues = response.json().get('issues', []) if response.status_code == 200 else []
-    jira_texts = [f"Issue {issue['key']}: {issue['fields']['summary']} (Status: {issue['fields']['status']['name']})" for issue in issues]
-    return jira_texts
 
 def add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_collection):
   print("Before inserting, the size of the collection: ", chroma_collection.count())
@@ -333,12 +249,6 @@ def generate_LLM_answer(prompt, context, chat):
   return response.text
 
 system_prompt = """
-You're an AI software process guide specialized in Agile methodologies.
-Your purpose is to assist users with detailed, practical advice on Agile process activities and best practices,
-helping them navigate and implement activities such as sprint planning, backlog refinement,
-daily standups, sprint reviews, retrospectives, release planning, and more. You have in-depth knowledge of Agile frameworks and can guide users through 10+ key process activities in software development.In other words, the agile process model should be evaluated against a minimum of 10 different process activities
-Provide clear, step-by-step instructions, answer questions, and offer relevant resources or examples. Ensure your responses are accurate, practical, and structured, helping users understand Agile practices better.
-You can pull relevant context to enhance clarity and adapt explanations based on the user’s familiarity with Agile concepts, whether they are beginners or advanced practitioners.
 """
 
 RAG_LLM = build_chatBot(system_prompt)
@@ -359,7 +269,7 @@ def generateAnswer(RAG_LLM, chroma_collection,query,n_results=5, only_response=T
     print('\n')
     return output
 
-query = """How can I improve our backlog refinement process to keep it organized and up-to-date?"""
+query = """"""
 
 reply=generateAnswer(RAG_LLM, chroma_collection, query,10, only_response=False)
 
@@ -375,26 +285,6 @@ def initialize_rag():
     )
 
     system_prompt = """
-You're an AI software process guide and assistant with a focus on Scum methodologies, supporting a broad range of Agile process activities. The process model we use here is Scrum.
-Your purpose is to help users by providing practical, structured guidance across a minimum of 10 key Scrum process activities, including:
-
-1. User stories, Persona Discovery and Creation 
-2. Product Backlog, 
-3. Sprint Planning, Backlog Refinement, Sprint Backlog, 
-4.. Daily Standups   →  daily summaries of team progress
-5.. Sprint Review  → Sprint reports, summaries 
-6. Retrospective 
-7. Release Planning (Predictive Analytics) (using feedback) 
-8. Incident/Bug Management 
-9. Continuous Integration/Deployment (CI/CD) 
-10. Quality Assurance/Testing (e.g: Test Data Generation, identify edge cases, and even predict areas of the code that might fail) 
-11. Stakeholder Communication
-12. Product Documentation 
-
-
-Provide clear, step-by-step instructions and ensure responses are tailored to these specific areas of Scrum practice. When responding to a question, indicate which of the 10 activities it aligns with and ensure that guidance is actionable and easy to understand. Include relevant resources, examples, and concise summaries to reinforce understanding.
-
-*Note:* Maintain awareness of the user's level of experience and adapt explanations to suit both beginners and advanced practitioners. Ensure each answer is concise but fully addresses the specific Agile process activity. And refer to the context mainly and give them as references.
 """
 
     model = genai.GenerativeModel('gemini-1.5-flash-latest', system_instruction=system_prompt)
