@@ -152,22 +152,66 @@ def generate_LLM_answer(prompt, context, chat):
     response = chat.send_message(prompt + "\n" + context)
     return response.text
 
-def generateAnswer(RAG_LLM, chroma_collection, query, n_results=5):
+def generateAnswer(RAG_LLM, chroma_collection, query, n_results=5, jwt_token=None):
+    # Retrieve documents from ChromaDB
     retrieved_documents = retrieveDocs(chroma_collection, query, n_results, return_only_docs=True)
     
+    # Fetch real-time data
     try:
-        api_url = "http://localhost:8080/coins/top50" 
+        api_url = "http://localhost:8080/coins/top50"
         real_time_data = fetch_and_cache_real_time_data(api_url, cache_key="crypto_real_time")
-        print("Real time data fetched")
+        print("Real-time data fetched")
     except Exception as e:
         real_time_data = {"error": str(e)}
     
-    # Combine static and real-time data into the prompt
+    # Fetch user-specific data
+    user_watchlist_data = {}
+    if jwt_token:
+        user_watchlist_data = fetch_user_watchlist(jwt_token)
+    
+    # Combine data into the prompt
     prompt = f"QUESTION: {query}"
     context = "\nEXCERPTS:\n" + "\n".join(retrieved_documents)
     context += f"\nREAL-TIME DATA:\n{json.dumps(real_time_data, indent=2)}"
+    context += f"\nUSER WATCHLIST DATA:\n{json.dumps(user_watchlist_data, indent=2)}"
     
+    # Generate answer using LLM
     return generate_LLM_answer(prompt, context, RAG_LLM)
+
+def fetch_user_watchlist(jwt_token):
+    """Fetch user-specific data, using Redis as a cache."""
+    cache_key = f"user_watchlist:{jwt_token}"
+    
+    # Check Redis cache
+    cached_data = redis_client.get(cache_key)
+    if cached_data:
+        print("User watchlist data fetched from cache")
+        return json.loads(cached_data)
+    
+    # If not in cache, fetch from Spring API
+    user_api_url = "http://localhost:8080/api/watchlist/user"
+    headers = {"Authorization": f"Bearer {jwt_token}"}
+    
+    try:
+        response = requests.get(user_api_url, headers=headers)
+        response.raise_for_status()
+        user_watchlist_data = response.json()
+        
+        # Store in Redis cache with a 10-minute expiration
+        redis_client.setex(cache_key, 600, json.dumps(user_watchlist_data))
+        print("User watchlist data fetched from API and cached")
+        return user_watchlist_data
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching user watchlist: {e}")
+        return {"error": str(e)}
+
+
+
+
+
+
+
+
 
 
 system_prompt = "You are a knowledgeable assistant specializing in cryptocurrency trading."
@@ -177,12 +221,10 @@ redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, decode_responses=T
 
 
 def fetch_and_cache_real_time_data(api_url, cache_key, ttl=300):
-    # Check Redis cache first
     cached_data = redis_client.get(cache_key)
     if cached_data:
         return json.loads(cached_data)
     
-    # Fetch from API if not cached
     response = requests.get(api_url)
     if response.status_code == 200:
         real_time_data = response.json()
