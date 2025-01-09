@@ -17,8 +17,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="Agile Process Guide API",
-    description="API for querying Agile process knowledge using RAG",
+    title="Crypto Trading guide API",
+    description="API for querying Crypto Trading knowledge using RAG",
     version="1.0.0"
 )
 
