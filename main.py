@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import uvicorn
 from typing import Optional
 import logging
+from fastapi import Request
 
 from sympy import false
 
@@ -56,28 +57,38 @@ async def root():
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, http_request: Request):
     try:
-        logger.info(f"Received chat request: {request.prompt[:100]}...")
+        # Extract JWT from Authorization header
+        auth_header = http_request.headers.get("Authorization", "")
+        print(auth_header)
+        jwt = auth_header.replace("Bearer ", "")
+        if not jwt:
+            raise HTTPException(
+                status_code=401,
+                detail="Missing JWT in Authorization header"
+            )
 
+        logger.info(f"Received JWT: {jwt[:10]}... (truncated)")
+
+        # Generate response using RAG
         response = generateAnswer(
             RAG_LLM=rag_llm,
             chroma_collection=chroma_collection,
             query=request.prompt,
             n_results=10,
-            only_response= False
+            jwt_token=jwt
         )
 
         # Extract sources if requested
         sources = None
-        if True:
+        if request.show_sources:
             # Get documents for sources
             results = chroma_collection.query(
                 query_texts=[request.prompt],
                 include=["metadatas"],
                 n_results=5
             )
-            logger.info(f"Reslts: {results}")
             sources = [
                 f"{meta['document']} ({meta['category']})"
                 for meta in results['metadatas'][0]
