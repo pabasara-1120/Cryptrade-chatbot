@@ -206,6 +206,51 @@ def fetch_user_watchlist(jwt_token):
         return {"error": str(e)}
 
 
+def initialize_rag():
+    """Initialize RAG components for FastAPI"""
+    try:
+        # Create or load the ChromaDB client and collection
+        chroma_client = PersistentClient(
+            path=chromaDB_path,
+            settings=Settings(),
+            tenant=DEFAULT_TENANT,
+            database=DEFAULT_DATABASE
+        )
+        chroma_collection = chroma_client.get_or_create_collection(
+            collection_name,
+            embedding_function=embedding_function
+        )
+        print("ChromaDB collection successfully created or loaded.")
+
+        # Optionally load documents into the ChromaDB collection if it's empty
+        if chroma_collection.count() == 0:
+            print("ChromaDB collection is empty. Loading data into ChromaDB...")
+            load_crypto_data_to_ChromaDB(
+                collection_name, 
+                sentence_transformer_model, 
+                chromaDB_path
+            )
+            print("Data successfully loaded into ChromaDB.")
+        else:
+            print(f"ChromaDB collection already contains {chroma_collection.count()} documents.")
+
+        # Define the system prompt for the generative AI chatbot
+        system_prompt = """
+        You are a knowledgeable assistant specializing in cryptocurrency trading. 
+        Use the provided context and retrieved documents to answer user queries.
+        Be as specific and informative as possible, citing your sources where relevant.
+        """
+
+        # Initialize the generative AI chatbot with the system prompt
+        model = genai.GenerativeModel('gemini-1.5-flash-latest', system_instruction=system_prompt)
+        chat = model.start_chat(history=[])
+
+        # Return the initialized components
+        return chroma_collection, chat
+
+    except Exception as e:
+        print(f"Error initializing RAG components: {e}")
+        raise RuntimeError(f"Failed to initialize RAG components: {e}")
 
 
 
@@ -233,40 +278,5 @@ def fetch_and_cache_real_time_data(api_url, cache_key, ttl=300):
         return real_time_data
     else:
         raise Exception(f"Failed to fetch real-time data: {response.status_code}")
-
-
-try:
-    # Create or load the ChromaDB client and collection
-    chroma_client = PersistentClient(
-        path=chromaDB_path,
-        settings=Settings(),
-        tenant=DEFAULT_TENANT,
-        database=DEFAULT_DATABASE
-    )
-    chroma_collection = chroma_client.get_or_create_collection(
-        collection_name,
-        embedding_function=embedding_function
-    )
-    print("ChromaDB collection successfully created or loaded.")
-    
-    # Try loading data into the collection
-    # try:
-    #     load_crypto_data_to_ChromaDB(collection_name, sentence_transformer_model, chromaDB_path)
-    #     print("Data successfully loaded into ChromaDB.")
-    # except RuntimeError as e:
-    #     print(f"Memory issue encountered: {e}")
-    #     print("Proceeding with the current ChromaDB collection without adding more data.")
-except Exception as e:
-    print(f"Failed to initialize ChromaDB: {e}")
-    chroma_collection = None  # Handle the case where the collection cannot be loaded
-
-# Example Query
-if chroma_collection:
-    query = "What is the current Bitcoin price and how does it compare to historical data?"
-    response = generateAnswer(RAG_LLM, chroma_collection, query, n_results=5)
-    print("Response:", response)
-
-else:
-    print("ChromaDB collection is not available. Cannot process queries.")
 
 
