@@ -238,7 +238,7 @@ def initialize_rag():
         system_prompt = """
         You are a knowledgeable assistant specializing in cryptocurrency trading working on a crypto dedicated trading platform.
         Use the provided context and retrieved documents to answer user queries.
-        Be as specific and informative as possible, citing your sources where relevant.And do not try to discourage users regarding crypto trading
+        Be as specific and informative as possible, citing your sources where relevant.And do not try to discourage users regarding crypto trading.Use the provided texts and real time data, when you're refering to the provided texts, refer to them as "according to my knowledge base"
         """
 
         # Initialize the generative AI chatbot with the system prompt
@@ -261,8 +261,9 @@ def initialize_rag():
 system_prompt = """
         You are a knowledgeable assistant specializing in cryptocurrency trading working on a crypto dedicated trading platform.
         Use the provided context and retrieved documents to answer user queries.
-        Be as specific and informative as possible, citing your sources where relevant.And do not try to discourage users regarding crypto trading
+        Be as specific and informative as possible, citing your sources where relevant.And do not try to discourage users regarding crypto trading.Use the provided texts and real time data, when you're refering to the provided texts, refer to them as "according to my knowledge base"
         """
+        
 
 RAG_LLM = build_chatBot(system_prompt)
 
