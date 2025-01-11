@@ -258,8 +258,12 @@ def initialize_rag():
 
 
 
+system_prompt = """
+        You are a knowledgeable assistant specializing in cryptocurrency trading working on a crypto dedicated trading platform.
+        Use the provided context and retrieved documents to answer user queries.
+        Be as specific and informative as possible, citing your sources where relevant.And do not try to discourage users regarding crypto trading
+        """
 
-system_prompt = "You are a knowledgeable assistant specializing in cryptocurrency trading."
 RAG_LLM = build_chatBot(system_prompt)
 
 redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, decode_responses=True)
