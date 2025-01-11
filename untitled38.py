@@ -236,9 +236,9 @@ def initialize_rag():
 
         # Define the system prompt for the generative AI chatbot
         system_prompt = """
-        You are a knowledgeable assistant specializing in cryptocurrency trading. 
+        You are a knowledgeable assistant specializing in cryptocurrency trading working on a crypto dedicated trading platform.
         Use the provided context and retrieved documents to answer user queries.
-        Be as specific and informative as possible, citing your sources where relevant.
+        Be as specific and informative as possible, citing your sources where relevant.And do not try to discourage users regarding crypto trading
         """
 
         # Initialize the generative AI chatbot with the system prompt

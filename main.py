@@ -5,6 +5,8 @@ import uvicorn
 from typing import Optional
 import logging
 from fastapi import Request
+from fastapi.responses import StreamingResponse 
+import asyncio
 
 from sympy import false
 
@@ -56,12 +58,10 @@ async def root():
     return {"status": "healthy", "message": "Agile Process Guide API is running"}
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest, http_request: Request):
     try:
-        # Extract JWT from Authorization header
         auth_header = http_request.headers.get("Authorization", "")
-        print(auth_header)
         jwt = auth_header.replace("Bearer ", "")
         if not jwt:
             raise HTTPException(
@@ -71,32 +71,24 @@ async def chat_endpoint(request: ChatRequest, http_request: Request):
 
         logger.info(f"Received JWT: {jwt[:10]}... (truncated)")
 
-        # Generate response using RAG
-        response = generateAnswer(
-            RAG_LLM=rag_llm,
+        # Define an async generator to stream the response
+        async def response_generator():
+            response = ""
+            
+            # Example of streaming response generation
+            for i, chunk in enumerate(generateAnswer(RAG_LLM=rag_llm,
             chroma_collection=chroma_collection,
             query=request.prompt,
             n_results=10,
-            jwt_token=jwt
-        )
+            jwt_token=jwt)):
+                
+                response += chunk
+                yield chunk
+                await asyncio.sleep(0.1)  # Simulate delay (optional)
 
-        # Extract sources if requested
-        sources = None
-        if request.show_sources:
-            # Get documents for sources
-            results = chroma_collection.query(
-                query_texts=[request.prompt],
-                include=["metadatas"],
-                n_results=5
-            )
-            sources = [
-                f"{meta['document']} ({meta['category']})"
-                for meta in results['metadatas'][0]
-            ]
-        logger.info(f"Sources used in response generation: {sources}")
+            logger.info(f"Final response: {response}")
 
-        logger.info("Successfully generated response")
-        return ChatResponse(bot=response, sources=sources)
+        return StreamingResponse(response_generator(), media_type="text/plain")
 
     except Exception as e:
         logger.error(f"Error processing chat request: {str(e)}")
